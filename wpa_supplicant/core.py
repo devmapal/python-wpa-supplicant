@@ -556,6 +556,9 @@ class Interface(BaseIface):
         else:
             return Network(network_path, self._conn, self._reactor)
 
+    def get_p2pdevice(self):
+        return P2PDevice(self.get_path(), self._conn, self._reactor)
+
     def get_networks(self):
         """List of `Network` objects representing configured networks"""
 
@@ -640,6 +643,22 @@ class Interface(BaseIface):
 
     def set_country(self, country_code):
         self.set('Country', country_code)
+
+
+class P2PDevice(BaseIface):
+    """Interface implemented by objects related to P2P (Wifi Direct)"""
+
+    INTERFACE_PATH = 'fi.w1.wpa_supplicant1.Interface.P2PDevice'
+
+    iface = DBusInterface(
+        INTERFACE_PATH,
+    )
+
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return "P2PDevice(Path: %s)" % (self.get_path())
 
 
 class BSS(BaseIface):
