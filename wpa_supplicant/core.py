@@ -21,6 +21,7 @@ from twisted.internet import defer, threads
 from txdbus.interface import DBusInterface, Method, Signal
 from txdbus import client, error
 from functools import wraps
+import dbus
 import threading
 import logging
 
@@ -651,7 +652,7 @@ class P2PDevice(BaseIface):
     INTERFACE_PATH = 'fi.w1.wpa_supplicant1.Interface.P2PDevice'
 
     iface = DBusInterface(
-        INTERFACE_PATH,
+        INTERFACE_PATH
     )
 
     def __repr__(self):
@@ -659,6 +660,310 @@ class P2PDevice(BaseIface):
 
     def __str__(self):
         return "P2PDevice(Path: %s)" % (self.get_path())
+
+    def _get_dbus_propery_interface(self):
+        bus = dbus.SystemBus()
+        proxy = bus.get_object(WpaSupplicant.INTERFACE_PATH, self.get_path())
+        return dbus.Interface(proxy,
+                              'org.freedesktop.DBus.Properties')
+
+    #
+    # Properties
+    #
+    def get_p2pdevice_config(self):
+        """Dictionary containing P2P configuration"""
+
+        return self.get('P2PDeviceConfig')
+
+    def get_device_name(self):
+        """Returns the device name"""
+
+        return self.get_p2pdevice_config().get('DeviceName')
+
+    def set_device_name(self, device_name):
+        """Sets the device name"""
+        argument = dbus.Dictionary(
+            {dbus.String('DeviceName'): dbus.String(device_name)},
+             signature=dbus.Signature('sv'),
+             variant_level=1)
+
+        iface = self._get_dbus_propery_interface()
+        iface.Set(self.INTERFACE_PATH, 'P2PDeviceConfig', argument)
+
+    def get_primary_device_type(self):
+        """Returns the primary device type"""
+
+        return self.get_p2pdevice_config().get('PrimaryDeviceType')
+
+    def set_primary_device_type(self, primary_device_type):
+        """Sets the primary device type. "primary_device_type" needs to be list
+        of Bytes of length 8"""
+
+        dbus_device_type = dbus.Array([dbus.Byte(x) for x in primary_device_type],
+                                      signature=dbus.Signature('y'),
+                                      variant_level=1)
+        argument = dbus.Dictionary(
+            {dbus.String('PrimaryDeviceType'): dbus_device_type},
+             signature=dbus.Signature('sv'),
+             variant_level=1)
+
+        iface = self._get_dbus_propery_interface()
+        iface.Set(self.INTERFACE_PATH, 'P2PDeviceConfig', argument)
+
+    def get_secondary_device_types(self):
+        """Returns the list of secondary device types"""
+
+        return self.get_p2pdevice_config().get('SecondaryDeviceTypes')
+
+    def set_secondary_device_types(self, secondary_device_types):
+        """Sets the secondary device types. "secondary_device_types" needs to be list
+        of device type, which in turn are a list of Bytes of length 8"""
+
+        device_types = []
+        for device_type in secondary_device_types:
+            device_types.append(dbus.Array([dbus.Byte(x) for x in device_type],
+                                            signature=dbus.Signature('y'),
+                                            variant_level=1))
+
+        dbus_device_types = dbus.Array(device_types,
+                                       signature=dbus.Signature('ay'),
+                                       variant_level=1)
+        argument = dbus.Dictionary(
+            {dbus.String('SecondaryDeviceTypes'): dbus_device_types},
+             signature=dbus.Signature('sv'),
+             variant_level=1)
+
+        iface = self._get_dbus_propery_interface()
+        iface.Set(self.INTERFACE_PATH, 'P2PDeviceConfig', argument)
+
+    def get_vendor_extension(self):
+        """Returns VendorExtension"""
+
+        return self.get_p2pdevice_config().get('VendorExtension')
+
+    def set_vendor_extension(self, vendor_extension):
+        """Sets VendorExtension"""
+
+        device_types = []
+        for device_type in vendor_extension:
+            device_types.append(dbus.Array([dbus.Byte(x) for x in device_type],
+                                            signature=dbus.Signature('y'),
+                                            variant_level=1))
+
+        dbus_device_types = dbus.Array(device_types,
+                                       signature=dbus.Signature('ay'),
+                                       variant_level=1)
+        argument = dbus.Dictionary(
+            {dbus.String('VendorExtension'): dbus_device_types},
+             signature=dbus.Signature('sv'),
+             variant_level=1)
+
+        iface = self._get_dbus_propery_interface()
+        iface.Set(self.INTERFACE_PATH, 'P2PDeviceConfig', argument)
+
+    def get_go_intent(self):
+        """Returns the GO intent"""
+
+        return self.get_p2pdevice_config().get('GOIntent')
+
+    def set_go_intent(self, go_intent):
+        """Sets the GO intent"""
+        argument = dbus.Dictionary(
+            {dbus.String('GOIntent'): dbus.UInt32(go_intent, variant_level=1)},
+             signature=dbus.Signature('sv'),
+             variant_level=1)
+
+        iface = self._get_dbus_propery_interface()
+        iface.Set(self.INTERFACE_PATH, 'P2PDeviceConfig', argument)
+
+    def get_persistent_reconnect(self):
+        """Returns True is persistent reconnect is enabled, false otherwise"""
+
+        return self.get_p2pdevice_config().get('PersistentReconnect')
+
+    def set_persistent_reconnect(self, persistent_reconnect):
+        """Sets persistent reconnect"""
+        argument = dbus.Dictionary(
+            {dbus.String('PersistentReconnect'):
+                dbus.Boolean(persistent_reconnect, variant_level=1)},
+             signature=dbus.Signature('sv'),
+             variant_level=1)
+
+        iface = self._get_dbus_propery_interface()
+        iface.Set(self.INTERFACE_PATH, 'P2PDeviceConfig', argument)
+
+    def get_listen_reg_class(self):
+        """Returns the ListenRegClass"""
+
+        return self.get_p2pdevice_config().get('ListenRegClass')
+
+    def set_listen_reg_class(self, listen_reg_class):
+        """Sets the ListenRegClass"""
+        argument = dbus.Dictionary(
+            {dbus.String('ListenRegClass'):
+                dbus.UInt32(listen_reg_class, variant_level=1)},
+             signature=dbus.Signature('sv'),
+             variant_level=1)
+
+        iface = self._get_dbus_propery_interface()
+        iface.Set(self.INTERFACE_PATH, 'P2PDeviceConfig', argument)
+
+    def get_listen_channel(self):
+        """Returns the channel on which the device is listening"""
+
+        return self.get_p2pdevice_config().get('ListenChannel')
+
+    def set_listen_channel(self, listen_channel):
+        """Sets which channel the device is listening on"""
+        argument = dbus.Dictionary(
+            {dbus.String('ListenChannel'):
+                dbus.UInt32(listen_channel, variant_level=1)},
+             signature=dbus.Signature('sv'),
+             variant_level=1)
+
+        iface = self._get_dbus_propery_interface()
+        iface.Set(self.INTERFACE_PATH, 'P2PDeviceConfig', argument)
+
+    def get_oper_reg_class(self):
+        """Returns the OperRegClass"""
+
+        return self.get_p2pdevice_config().get('OperRegClass')
+
+    def set_oper_reg_class(self, oper_reg_class):
+        """Sets the OperRegClass"""
+        argument = dbus.Dictionary(
+            {dbus.String('OperRegClass'):
+                dbus.UInt32(oper_reg_class, variant_level=1)},
+             signature=dbus.Signature('sv'),
+             variant_level=1)
+
+        iface = self._get_dbus_propery_interface()
+        iface.Set(self.INTERFACE_PATH, 'P2PDeviceConfig', argument)
+
+    def get_oper_channel(self):
+        """Returns the OperChannel"""
+
+        return self.get_p2pdevice_config().get('OperChannel')
+
+    def set_oper_channel(self, oper_channel):
+        """Sets the OperChannel"""
+        argument = dbus.Dictionary(
+            {dbus.String('OperChannel'):
+                dbus.UInt32(oper_channel, variant_level=1)},
+             signature=dbus.Signature('sv'),
+             variant_level=1)
+
+        iface = self._get_dbus_propery_interface()
+        iface.Set(self.INTERFACE_PATH, 'P2PDeviceConfig', argument)
+
+    def get_ssid_postfix(self):
+        """Returns the SSID postfix"""
+
+        return self.get_p2pdevice_config().get('SsidPostfix')
+
+    def set_ssid_postfix(self, ssid_postfix):
+        """Sets the SSID postfix"""
+        argument = dbus.Dictionary(
+            {dbus.String('SsidPostfix'): dbus.String(ssid_postfix)},
+             signature=dbus.Signature('sv'),
+             variant_level=1)
+
+        iface = self._get_dbus_propery_interface()
+        iface.Set(self.INTERFACE_PATH, 'P2PDeviceConfig', argument)
+
+    def get_intra_bss(self):
+        """Returns IntraBss"""
+
+        return self.get_p2pdevice_config().get('IntraBss')
+
+    def set_intra_bss(self, intra_bss):
+        """Sets IntraBss"""
+        argument = dbus.Dictionary(
+            {dbus.String('IntraBss'): dbus.Boolean(intra_bss, variant_level=1)},
+             signature=dbus.Signature('sv'),
+             variant_level=1)
+
+        iface = self._get_dbus_propery_interface()
+        iface.Set(self.INTERFACE_PATH, 'P2PDeviceConfig', argument)
+
+    def get_group_idle(self):
+        """Returns GroupIdle"""
+
+        return self.get_p2pdevice_config().get('GroupIdle')
+
+    def set_group_idle(self, group_idle):
+        """Sets GroupIdle"""
+        argument = dbus.Dictionary(
+            {dbus.String('GroupIdle'):
+                dbus.UInt32(group_idle, variant_level=1)},
+             signature=dbus.Signature('sv'),
+             variant_level=1)
+
+        iface = self._get_dbus_propery_interface()
+        iface.Set(self.INTERFACE_PATH, 'P2PDeviceConfig', argument)
+
+    def get_disassoc_low_ack(self):
+        """Returns disassoc_low_ack"""
+
+        return self.get_p2pdevice_config().get('disassoc_low_ack')
+
+    def set_disassoc_low_ack(self, disassoc_low_ack):
+        """Sets disassoc_low_ack"""
+        argument = dbus.Dictionary(
+            {dbus.String('disassoc_low_ack'):
+                dbus.UInt32(disassoc_low_ack, variant_level=1)},
+             signature=dbus.Signature('sv'),
+             variant_level=1)
+
+        iface = self._get_dbus_propery_interface()
+        iface.Set(self.INTERFACE_PATH, 'P2PDeviceConfig', argument)
+
+    def get_no_group_iface(self):
+        """Returns NoGroupIface"""
+
+        return self.get_p2pdevice_config().get('NoGroupIface')
+
+    def set_no_group_iface(self, no_group_iface):
+        """Sets NoGroupIface"""
+        argument = dbus.Dictionary(
+            {dbus.String('NoGroupIface'):
+                dbus.Boolean(no_group_iface, variant_level=1)},
+             signature=dbus.Signature('sv'),
+             variant_level=1)
+
+        iface = self._get_dbus_propery_interface()
+        iface.Set(self.INTERFACE_PATH, 'P2PDeviceConfig', argument)
+
+    def get_p2p_search_delay(self):
+        """Returns p2p_search_delay"""
+
+        return self.get_p2pdevice_config().get('p2p_search_delay')
+
+    def set_p2p_search_delay(self, p2p_search_delay):
+        """Sets disassoc_low_ack"""
+        argument = dbus.Dictionary(
+            {dbus.String('p2p_search_delay'):
+                dbus.UInt32(p2p_search_delay, variant_level=1)},
+             signature=dbus.Signature('sv'),
+             variant_level=1)
+
+        iface = self._get_dbus_propery_interface()
+        iface.Set(self.INTERFACE_PATH, 'P2PDeviceConfig', argument)
+
+    def get_peers(self):
+        return self.get('Peers')
+
+    def get_role(self):
+        return self.get('Role')
+
+    def get_group(self):
+        return self.get('Group')
+
+    def get_peer_go(self):
+        return self.get('PeerGO')
+
+    def get_persistent_groups(self):
+        return self.get('PersistentGroups')
 
 
 class BSS(BaseIface):
