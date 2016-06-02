@@ -19,6 +19,7 @@ The libraries API was mainly derived from the following documentation:
 """
 from twisted.internet import defer, threads
 from txdbus.interface import DBusInterface, Method, Signal
+from txdbus.marshal import ObjectPath
 from txdbus import client, error
 from functools import wraps
 import dbus
@@ -652,7 +653,32 @@ class P2PDevice(BaseIface):
     INTERFACE_PATH = 'fi.w1.wpa_supplicant1.Interface.P2PDevice'
 
     iface = DBusInterface(
-        INTERFACE_PATH
+        INTERFACE_PATH,
+        Method('Find', arguments='a{sv}'),
+        Method('StopFind'),
+        Method('Listen', arguments='i'),
+        Method('ExtendedListen', arguments='a{sv}'),
+        Method('PresenceRequest', arguments='a{sv}'),
+        Method('ProvisionDiscoveryRequest', arguments='os'),
+        Method('Connect', arguments='a{sv}', returns='s'),
+        Method('GroupAdd', arguments='a{sv}'),
+        Method('Cancel'),
+        Method('Invite', arguments='a{sv}'),
+        Method('Disconnect'),
+        Method('RejectPeer', arguments='o'),
+        Method('RemoveClient', arguments='a{sv}'),
+        Method('Flush'),
+        Method('AddService', arguments='a{sv}'),
+        Method('DeleteService', arguments='a{sv}'),
+        Method('FlushService'),
+        Method('ServiceDiscoveryRequest', arguments='a{sv}', returns='t'),
+        Method('ServiceDiscoveryResponse', arguments='a{sv}'),
+        Method('ServiceDiscoveryCancelRequest', arguments='t'),
+        Method('ServiceUpdate'),
+        Method('ServiceDiscoveryExternal', arguments='i'),
+        Method('AddPersistentGroup', arguments='a{sv}', returns='o'),
+        Method('RemovePersistentGroup', arguments='o'),
+        Method('RemoveAllPersistentGroups')
     )
 
     def __repr__(self):
@@ -666,6 +692,317 @@ class P2PDevice(BaseIface):
         proxy = bus.get_object(WpaSupplicant.INTERFACE_PATH, self.get_path())
         return dbus.Interface(proxy,
                               'org.freedesktop.DBus.Properties')
+
+
+    #
+    # Methods
+    #
+    def find(self,
+             timeout=None,
+             requested_device_types=None,
+             discovery_type='start_with_full'):
+        """Start P2P find operation (i.e., alternating P2P Search and Listen
+        states to discover peers and be discoverable)
+
+        timeout -- Timeout for operating in seconds
+        requested_device_types -- WPS Device Types to search for (List of byte
+                                  arrays with length 8)
+        discovery_type -- "start_with_full" (default, if not specified),
+                          "social", "progressive"
+        """
+
+        kwargs = {'DiscoveryType': discovery_type}
+
+        if timeout is not None:
+            kwargs['Timeout'] = timeout
+
+        if requested_device_types is not None:
+            kwargs['RequestedDeviceTypes'] = requested_device_types
+
+        self._call_remote('Find', kwargs)
+
+    def stop_find(self):
+        """Stop P2P find operation."""
+        self._call_remote('StopFind')
+
+    def listen(self, timeout):
+        """Start P2P listen operation (i.e., be discoverable).
+
+        timeout -- Listen timeout in milliseconds
+        :raises InvalidArgs: Invalid argument format
+        :raises UnknownError: An unknown error occurred
+        """
+
+        self._call_remote('Listen', timeout)
+
+    def extended_listen(self, period=None, interval=None):
+        """Configure Extended Listen Timing. If the parameters are omitted,
+        this feature is disabled. If the parameters are included, Listen State
+        will be entered every interval msec for at least period msec. Both
+        values have acceptable range of 1-65535 (with interval obviously having
+        to be larger than or equal to duration). If the P2P module is not idle
+        at the time the Extended Listen Timing timeout occurs, the Listen State
+        operation will be skipped.
+
+        period -- Extended listen period in milliseconds; 1-65535.
+        interval -- Extended listen interval in milliseconds; 1-65535.
+        """
+
+        kwargs = {}
+        if period is not None:
+            kwargs['period'] = period
+        if interval is not None:
+            kwargs['interval'] = interval
+
+        self._call_remote('ExtendedListen', kwargs)
+
+    def presence_request(self,
+                         duration1=None, interval1=None,
+                         duration2=None, interval2=None):
+        """Request a specific GO presence in a P2P group where the local device
+        is a P2P Client. Send a P2P Presence Request to the GO (this is only
+        available when acting as a P2P client). If no duration/interval pairs
+        are given, the request indicates that this client has no special needs
+        for GO presence. The first parameter pair gives the preferred duration
+        and interval values in microseconds. If the second pair is included,
+        that indicates which value would be acceptable.
+
+        Note: This needs to be issued on a P2P group interface if separate
+        group interfaces are used.
+
+        duration1 -- Duration in microseconds.
+        interval1 -- Interval in microseconds.
+        duration2 -- Duration in microseconds.
+        interval2 -- Interval in microseconds.
+        """
+
+        kwargs = {}
+        if duration1 is not None:
+            kwargs['duration1'] = duration1
+        if interval1 is not None:
+            kwargs['interval1'] = interval1
+        if duration2 is not None:
+            kwargs['duration2'] = duration2
+        if interval2 is not None:
+            kwargs['interval2'] = interval2
+
+        self._call_remote('PresenceRequest', kwargs)
+
+    def provision_discovery_request(self, peer, config_method):
+        self._call_remote('ProvisionDiscoveryRequest', (peer, config_method))
+
+    def connect(self, peer, wps_method, persistent=None, join=None,
+                authorize_only=None, frequency=None, go_intent=None, pin=None):
+        """Request a P2P group to be started through GO Negotiation or by
+        joining an already operating group.
+
+        peer -- Must be a syntactically valid object path of 'peer'
+        wps_method -- "pbc", "display", "keypad", "pin" (alias for "display")
+        persistent -- Whether to form a persistent group.
+        join -- Whether to join an already operating group instead of forming a new group.
+        authorize_only -- Whether to authorize a peer to initiate GO Negotiation instead of initiating immediately.
+        frequency -- Operating frequency in MHz
+        go_intent -- GO intent 0-15
+        pin -- PIN to use
+
+        :returns: generated_pin
+        """
+
+        kwargs = {'peer': ObjectPath(peer), 'wps_method': wps_method}
+        if persistent is not None:
+            kwargs['persistent'] = persistent
+        if join is not None:
+            kwargs['join'] = join
+        if authorize_only is not None:
+            kwargs['authorize_only'] = authorize_only
+        if frequency is not None:
+            kwargs['frequency'] = frequency
+        if go_intent is not None:
+            kwargs['go_intent'] = go_intent
+        if pin is not None:
+            kwargs['pin'] = pin
+
+        return self._call_remote('Connect', kwargs)
+
+    def group_add(self,
+                  persistent=None,
+                  persistent_group_object=None,
+                  frequency=None):
+        """Request a P2P group to be started without GO Negotiation.
+
+        persistent --   Whether to form a persistent group.
+        persistent_group_object -- Must be a syntactically valid object path of
+                                   'persistent_group_object'.
+        frequency -- Operating frequency in MHz
+        """
+
+        kwargs = {}
+        if persistent is not None:
+            kwargs['persistent'] = persistent
+        if persistent_group_object is not None:
+            kwargs['persistent_group_object'] = persistent_group_object
+        if frequency is not None:
+            kwargs['frequency'] = frequency
+
+        self._call_remote('GroupAdd', kwargs)
+
+    def cancel(self):
+        """Stop ongoing P2P group formation operation."""
+        self._call_remote('Cancel')
+
+    def invite(self, peer, persistent_group_object=None):
+        """Invite a peer to join an already operating group or to re-invoke a
+        persistent group.
+
+        peer -- Must be a syntactically valid object path of 'peer'
+        persistent_group_object -- Must be a syntactically valid object path of
+                                   'persistent_group_object'.
+        """
+
+        kwargs = {'peer': ObjectPath(peer)}
+        if persistent_group_object is not None:
+            kwargs['persistent_group_object'] = ObjectPath(
+                persistent_group_object)
+
+        self._call_remote('Invite', kwargs)
+
+    def disconnect(self):
+        """Terminate a P2P group.
+
+        Note: This needs to be issued on a P2P group interface if separate
+        group interfaces are used.
+        """
+        self._call_remote('Disconnect')
+
+    def reject_peer(self, peer):
+        """Reject connection attempt from a peer (specified with a device
+        address). This is a mechanism to reject a pending GO Negotiation with a
+        peer and request to automatically block any further connection or
+        discovery of the peer.
+
+        peer -- Must be a syntactically valid object path of 'peer'
+        """
+
+        self._call_remote('RejectPeer', peer)
+
+    def remove_client(self, peer=None, iface=None):
+        """Remove the client from all groups (operating and persistent) from
+        the local GO.
+
+        peer -- Object path for peer's P2P Device address
+        iface -- Interface address[MAC Address format] of the peer to be
+                 disconnected. Required if object path is not provided.
+        """
+
+        kwargs = {}
+        if peer is not None:
+            kwargs['peer'] = ObjectPath(peer)
+        if iface is not None:
+            kwargs['iface'] = iface
+
+        self._call_remote('RemoveClient', kwargs)
+
+    def flush(self):
+        """Flush P2P peer table and state."""
+        self._call_remote('Flush')
+
+    def add_service(self, service_type,
+                    version=None, service=None, query=None, response=None):
+        """
+        service_type -- "upnp" or "bonjour"
+        version -- Required for UPnP services.
+        """
+
+        kwargs = {'service_type': service_type}
+        if version is not None:
+            kwargs['version'] = version
+        if service is not None:
+            kwargs['service'] = service
+        if query is not None:
+            kwargs['query'] = query
+        if response is not None:
+            kwargs['response'] = response
+
+        self._call_remote('AddService', kwargs)
+
+    def delete_service(self, service_type,
+                       version=None, service=None, query=None):
+        """
+        service_type -- "upnp" or "bonjour"
+        version -- Required for UPnP services.
+        """
+
+        kwargs = {'service_type': service_type}
+        if version is not None:
+            kwargs['version'] = version
+        if service is not None:
+            kwargs['service'] = service
+        if query is not None:
+            kwargs['query'] = query
+
+        self._call_remote('DeleteService', kwargs)
+
+    def flush_service(self):
+        self._call_remote('FlushService')
+
+    def service_discovery_request(self, peer_object=None, service_type=None,
+                                  version=None, service=None, tlv=None):
+        """
+        service_type -- "upnp" or "bonjour"
+        version -- Required for UPnP services.
+        """
+
+        kwargs = {}
+        if peer_object is not None:
+            kwargs['peer_object'] = ObjectPath(peer_object)
+        if service_type is not None:
+            kwargs['service_type'] = service_type
+        if version is not None:
+            kwargs['version'] = version
+        if service is not None:
+            kwargs['service'] = service
+        if tlv is not None:
+            kwargs['tlv'] = tlv
+
+        return self._call_remote('ServiceDiscoveryRequest', kwargs)
+
+    def service_discovery_response(
+            self, peer_object, frequency, dialog_token, tlvs):
+
+        kwargs = {'peer_object': ObjectPath(peer_object),
+                  'frequency': frequency,
+                  'dialog_token': dialog_token,
+                  'tlvs': tlvs}
+
+        self._call_remote('ServiceDiscoveryResponse', kwargs)
+
+    def service_discovery_cancel_request(self, dialog_token):
+        self._call_remote('ServiceDiscoveryCancelRequest', dialog_token)
+
+    def service_update(self):
+        self._call_remote('ServiceUpdate')
+
+    def service_discovery_external(self, i):
+        self._call_remote('ServiceDiscoveryExternal', i)
+
+    def add_persistent_group(self, bssid, ssid, psk, mode):
+        """
+        bssid -- P2P Device Address of the GO in the persistent group.
+        ssid -- SSID of the group
+        psk -- Passphrase (on the GO and optionally on P2P Client) or PSK (on
+               P2P Client if passphrase is not known)
+        mode -- "3" on GO or "0" on P2P Client
+        """
+
+        kwargs = {'bssid': bssid, 'ssid': ssid, 'psk': psk, 'mode': mode}
+
+        return self._call_remote('AddPersistentGroup', kwargs)
+
+    def remove_persistent_group(self, path):
+        self._call_remote('RemovePersistentGroup', path)
+
+    def remove_all_persistent_groups(self):
+        self._call_remote('RemoveAllPersistentGroups')
 
     #
     # Properties
