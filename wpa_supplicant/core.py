@@ -678,7 +678,30 @@ class P2PDevice(BaseIface):
         Method('ServiceDiscoveryExternal', arguments='i'),
         Method('AddPersistentGroup', arguments='a{sv}', returns='o'),
         Method('RemovePersistentGroup', arguments='o'),
-        Method('RemoveAllPersistentGroups')
+        Method('RemoveAllPersistentGroups'),
+        Signal('DeviceFound', 'o'),
+        Signal('DeviceLost', 'o'),
+        Signal('FindStopped'),
+        Signal('ProvisionDiscoveryRequestDisplayPin', 'os'),
+        Signal('ProvisionDiscoveryResponseDisplayPin', 'os'),
+        Signal('ProvisionDiscoveryRequestEnterPin', 'o'),
+        Signal('ProvisionDiscoveryResponseEnterPin', 'o'),
+        Signal('ProvisionDiscoveryPBCRequest', 'o'),
+        Signal('ProvisionDiscoveryPBCResponse', 'o'),
+        Signal('ProvisionDiscoveryFailure', 'oi'),
+        Signal('GroupStarted', 'a{sv}'),
+        Signal('GONegotiationSuccess', 'a{sv}'),
+        Signal('GONegotiationFailure', 'a{sv}'),
+        Signal('GONegotiationRequest', 'oqy'),
+        Signal('InvitationResult', 'a{sv}'),
+        Signal('GroupFinished', 'a{sv}'),
+        Signal('ServiceDiscoveryRequest', 'a{sv}'),
+        Signal('ServiceDiscoveryResponse', 'a{sv}'),
+        Signal('PersistentGroupAdded', 'oa{sv}'),
+        Signal('PersistentGroupRemoved', 'o'),
+        Signal('WpsFailed', 'sa{sv}'),
+        Signal('InvitationReceived', 'a{sv}'),
+        Signal('GroupFormationFailure', 's')
     )
 
     def __repr__(self):
