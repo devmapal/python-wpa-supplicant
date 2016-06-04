@@ -11,6 +11,7 @@ install_requires = [
     'txdbus>=1.0.1',
     'click',
     'six',
+    'dbus-python',
 ]
 
 
