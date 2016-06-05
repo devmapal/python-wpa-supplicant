@@ -10,7 +10,8 @@ import threading
 import six
 from six.moves.queue import Queue
 from wpa_supplicant.core import WpaSupplicantDriver, Interface, BSS, Network, \
-    InterfaceUnknown, InterfaceExists, NotConnected, NetworkUnknown, WpaSupplicant
+    InterfaceUnknown, InterfaceExists, NotConnected, NetworkUnknown, WpaSupplicant, \
+    P2PDevice
 from twisted.internet.selectreactor import SelectReactor
 import mock
 from wpa_supplicant.test import mocks
@@ -75,6 +76,10 @@ class TestWpaSupplicant(unittest.TestCase):
     #
     def _get_interface(self, interface_name):
         return self._supplicant.get_interface(interface_name)
+
+    def _get_p2pdevice(self, interface_name):
+        iface = self._get_interface('wlan0')
+        return P2PDevice(iface.get_path(), iface._conn, iface._reactor)
 
     def _get_any_bss(self):
         iface = self._get_interface('wlan0')
@@ -376,3 +381,11 @@ class TestWpaSupplicant(unittest.TestCase):
 
     def test_get_enabled(self):
         pass
+
+
+    #
+    # Test Network
+    #
+    def test_get_device_name(self):
+        p2p_device = self._get_interface('wlan0').get_p2pdevice()
+        self.assertEqual(p2p_device.get_device_name(), u'a device')

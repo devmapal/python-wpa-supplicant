@@ -353,18 +353,184 @@ class MockNetworkObject(MockDBusObject):
         }
 
 
+class MockP2PDeviceObject(object):
+    """Mock txdbus/wpa_supplicant .fi.w1.wpa_supplicant1.P2PDevice object"""
+
+    #
+    # Methods
+    #
+    def Find(self, cfg):
+        return None
+
+    def StopFind(self):
+        return None
+
+    def Listen(self, timeout):
+        return None
+
+    def ExtendedListen(self, cfg):
+        return None
+
+    def PresenceRequest(self, cfg):
+        return None
+
+    def ProvisionDiscoveryRequest(self, cfg):
+        return None
+
+    def Connect(self, cfg):
+        frequency = cfg.get('frequency')
+        if frequency is not None and frequency < 0:
+            raise error.RemoteError(
+                'Did not receive correct message arguments.')
+
+        go_intent = cfg.get('go_intent')
+        if go_intent < 0 or go_intent > 15:
+            raise error.RemoteError(
+                'Did not receive correct message arguments.')
+
+        wps_method = cfg.get('wps_method')
+        if wps_method not in ('pbc', 'display', 'keypad', 'pin'):
+            raise error.RemoteError(
+                'Did not receive correct message arguments.')
+
+        pin = cfg.get('pin')
+        if wps_method == 'keypad' and pin is None:
+            raise error.RemoteError(
+                'Did not receive correct message arguments.')
+
+        return u'123456'
+
+    def GroupAdd(self, cfg):
+        frequency = cfg.get('frequency')
+        if frequency is not None and frequency < 0:
+            raise error.RemoteError(
+                'Did not receive correct message arguments.')
+
+    def Cancel(self):
+        return None
+
+    def Invite(self, cfg):
+        return None
+
+    def Disconnect(self):
+        return None
+    
+    def RejectPeer(self, peer):
+        return None
+
+    def RemoveClient(self, cfg):
+        return None
+
+    def Flush(self):
+        return None
+    
+    def AddService(self, cfg):
+        service_type = cfg.get('service_type')
+        version = cfg.get('version')
+        if service_type == 'upnp' and version is None:
+            raise error.RemoteError(
+                'Did not receive correct message arguments.')
+    
+    def DeleteService(self, cfg):
+        service_type = cfg.get('service_type')
+        version = cfg.get('version')
+        if service_type == 'upnp' and version is None:
+            raise error.RemoteError(
+                'Did not receive correct message arguments.')
+
+    def FlushService(self):
+        return None
+
+    def ServiceDiscoveryRequest(self, cfg):
+        service_type = cfg.get('service_type')
+        version = cfg.get('version')
+        if(service_type is not None and
+           service_type == 'upnp' and
+           version is None):
+            raise error.RemoteError(
+                'Did not receive correct message arguments.')
+
+        return 12
+
+    def ServiceDiscoveryResponse(self, cfg):
+        return None
+
+    def ServiceDiscoveryCancelRequest(self, token):
+        return None
+
+    def ServiceUpdate(self):
+        return None
+
+    def ServiceDiscoveryExternal(self, i):
+        return None
+
+    def AddPersistentGroup(self, cfg):
+        return u'/'
+
+    def RemovePersistentGroup(self, path):
+        return None
+
+    def RemoveAllPersistentGroups(self):
+        return None
+    
+
+
+    #
+    # Properties
+    #
+    def Get_P2PDeviceConfig(self):
+        return {
+            u'DeviceName': u'a device',
+            u'PrimaryDeviceType': [1, 2, 3, 4, 5, 6, 7, 8],
+            u'SecondaryDeviceTypes': [[1, 2, 3, 4, 5, 6, 7, 8],
+                                      [8, 7, 6, 5, 4, 3, 2, 1]],
+            u'VendorExtension': [[3, 2, 3, 4, 5, 6, 7, 8],
+                                 [8, 7, 4, 5, 4, 3, 2, 1]],
+            u'GOIntent': 3,
+            u'PersistentReconnect': True,
+            u'ListenRegClass': 543,
+            u'ListenChannel': 43,
+            u'OperRegClass': 22,
+            u'OperChannel': 555,
+            u'SsidPostfix': u'postfix',
+            u'IntraBss': True,
+            u'GroupIdle': 666,
+            u'disassoc_low_ack': 1,
+            u'NoGroupIface': True,
+            u'p2p_search_delay': u'500'
+        }
+
+        def Get_Peers(self):
+            return [u'/fi/w1/wpa_supplicant1/Interfaces/1/Peers/32f77203e5a5',
+                     u'/fi/w1/wpa_supplicant1/Interfaces/1/Peers/02044b2906fb']
+
+        def Get_Role(self):
+            return u'device'
+
+        def Get_Group(self):
+            return u'/'
+
+        def Get_PeerGO(self):
+            return u'/'
+
+
 class MockConnection(object):
     """Mock txdbus client connection to a D-Bus server"""
 
     mock_objects = OrderedDict([
         ('/fi/w1/wpa_supplicant1/Interfaces/.+/BSSs/.+', MockBSSObject),
         ('/fi/w1/wpa_supplicant1/Networks/.+', MockNetworkObject),
+        # TODO: Need to differentiate also on interface path
+        ('/fi/w1/wpa_supplicant1/Interfaces/.+', MockP2PDeviceObject),
         ('/fi/w1/wpa_supplicant1/Interfaces/.+', MockInterfaceObject),
         ('/fi/w1/wpa_supplicant1', MockWpaSupplicant)
     ])
 
     @defer.inlineCallbacks
     def getRemoteObject(self, busName, objectPath, interfaces=None):
+        print busName
+        print objectPath
+        print interfaces
         interface_object = None
         for opath, interface in self.mock_objects.items():
             match = re.match(opath, objectPath)
